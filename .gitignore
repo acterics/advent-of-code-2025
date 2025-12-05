@@ -1,0 +1,8 @@
+# Build artifacts
+day*/solution
+day*/test
+*.dSYM/
+
+# OS files
+.DS_Store
+
