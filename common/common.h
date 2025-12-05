@@ -30,5 +30,22 @@ void free_lines(char** lines, int count);
 }
 
 
+#define MIN(a, b) a < b ? a : b
+#define MAX(a, b) a > b ? a : b
+
+
+typedef struct TreeNode {
+    long value;
+    struct TreeNode* left;
+    struct TreeNode* right;
+} TreeNode;
+
+TreeNode* create_node(long value);
+TreeNode* insert_tree(TreeNode* root, long value, int allow_duplicates);
+int contains_tree(TreeNode* root, long value);
+long sum_tree(TreeNode* root);
+void free_tree(TreeNode* root);
+
+
 #endif /* COMMON_H */
 
