@@ -37,7 +37,7 @@ char **read_lines(const char *filename, int *count) {
     if (*p == '\n')
       n++;
   }
-  if (content[strlen(content) - 1] != '\n')
+  if (strlen(content) > 0 && content[strlen(content) - 1] != '\n')
     n++;
 
   char **lines = malloc(n * sizeof(char *));
@@ -49,10 +49,20 @@ char **read_lines(const char *filename, int *count) {
 
   /* Split into lines */
   int i = 0;
-  char *line = strtok(content, "\n");
-  while (line && i < n) {
-    lines[i] = strdup(line);
-    line = strtok(NULL, "\n");
+  char *start = content;
+  char *p = content;
+  while (*p && i < n) {
+    if (*p == '\n') {
+      *p = '\0';
+      lines[i] = strdup(start);
+      start = p + 1;
+      i++;
+    }
+    p++;
+  }
+  /* Handle last line without trailing newline */
+  if (start < p && i < n) {
+    lines[i] = strdup(start);
     i++;
   }
 
@@ -119,7 +129,7 @@ TreeNode *insert_tree(TreeNode *root, long value, int allow_duplicates) {
 
 int contains_tree(TreeNode *root, long value) {
   TreeNode *current = root;
-  
+
   while (current != NULL) {
     if (value == current->value) {
       return 1;
@@ -129,7 +139,7 @@ int contains_tree(TreeNode *root, long value) {
       current = current->right;
     }
   }
-  
+
   return 0;
 }
 
@@ -149,4 +159,94 @@ void free_tree(TreeNode *root) {
   free_tree(root->left);
   free_tree(root->right);
   free(root);
+}
+
+RangeNode *create_range_node(long min, long max) {
+  RangeNode *node = malloc(sizeof(RangeNode));
+  if (!node)
+    return NULL;
+
+  node->range_min = min;
+  node->range_max = max;
+  node->next = NULL;
+  return node;
+}
+RangeNode *insert_range(RangeNode *root, long min, long max) {
+  if (!root) {
+    return create_range_node(min, max);
+  }
+  RangeNode *current = root;
+  RangeNode *prev = NULL;
+  // Find the position where we need to insert/merge
+  // Skip nodes that come entirely before our range and don't overlap
+  while (current && current->range_max < min - 1) {
+    prev = current;
+    current = current->next;
+  }
+  // If we've passed all nodes, append at the end
+  if (!current) {
+    RangeNode *new_node = create_range_node(min, max);
+    prev->next = new_node;
+    return root;
+  }
+
+  // If our range comes entirely before current node (no overlap)
+  if (max < current->range_min - 1) {
+    RangeNode *new_node = create_range_node(min, max);
+    new_node->next = current;
+    if (prev) {
+      prev->next = new_node;
+      return root;
+    }
+    return new_node; // New head
+  }
+  // We have overlap/adjacency - need to merge
+  // Expand current node to include our range
+  current->range_min = MIN(current->range_min, min);
+  current->range_max = MAX(current->range_max, max);
+  // Now merge any subsequent overlapping nodes
+  while (current->next && current->next->range_min <= current->range_max + 1) {
+    RangeNode *to_remove = current->next;
+    current->range_max = MAX(current->range_max, to_remove->range_max);
+    current->next = to_remove->next;
+    free(to_remove);
+  }
+
+  return root;
+}
+
+int contains_in_ranges(RangeNode *root, long value) {
+  RangeNode *current = root;
+
+  while (current) {
+    if (value >= current->range_min && value <= current->range_max) {
+      return 1; // Found in this range
+    }
+    current = current->next;
+  }
+
+  return 0;
+}
+
+void print_ranges(RangeNode *root) {
+  RangeNode *current = root;
+  int i = 0;
+
+  while (current) {
+    printf("Range %d: %ld..%ld\n", i++, current->range_min, current->range_max);
+    current = current->next;
+  }
+}
+
+void free_ranges(RangeNode *root) {
+  RangeNode *current = root;
+  while (current) {
+    RangeNode *next = current->next;
+    free(current);
+    current = next;
+  }
+}
+
+int is_ranges_overlap(long lmin, long lmax, long rmin, long rmax) {
+  return lmin <= rmax + 1 && rmin <= lmax + 1;
 }
